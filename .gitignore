@@ -1,0 +1,18 @@
+# Build folders
+/build/
+/CMakeFiles/
+/CMakeCache.txt
+/Makefile
+/cmake_install.cmake
+
+# Executables
+/genetic_cargo
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Editor configs
+.vscode/
+.idea/
+*.swp
