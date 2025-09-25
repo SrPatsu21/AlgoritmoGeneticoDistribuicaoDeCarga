@@ -1,30 +1,22 @@
 #include <bits/stdc++.h>
-using namespace std;
 
-// ============================
-// Cargo structure
-// ============================
 struct Cargo {
     double volume;
     double weight;
     double profit;
 };
 
-// ============================
-// Compartment structure
-// ============================
 struct Compartment {
     double maxVolume;
     double maxWeight;
 };
 
-// ============================
-// Problem Data
-// ============================
 const int NUM_CARGOS = 4;
 const int NUM_COMPARTMENTS = 3;
+const int NUM_GENES = NUM_CARGOS * NUM_COMPARTMENTS;
 
 Cargo cargos[NUM_CARGOS] = {
+//  (m³/ton), (ton), (R$/ton)
     {480, 18, 310},
     {650, 15, 380},
     {580, 23, 350},
@@ -32,82 +24,80 @@ Cargo cargos[NUM_CARGOS] = {
 };
 
 Compartment compartments[NUM_COMPARTMENTS] = {
+//  (m³), (ton)
     {6800, 10},   // Front
     {8700, 16},   // Center
     {5300, 8}     // Rear
 };
 
 // Genetic Algorithm parameters
-const int POP_SIZE = 100;
+const int POP_SIZE = 500;
 const int GENERATIONS = 500;
 const double MUTATION_RATE = 0.1;
 const double CROSSOVER_RATE = 0.8;
 
-// ============================
-// Chromosome representation:
-// A chromosome is a vector with NUM_CARGOS * NUM_COMPARTMENTS elements
-// Each element = tons of cargo allocated to a given compartment
-// ============================
+/**
+    Chromosome representation:
+    A chromosome is a vector with NUM_CARGOS * NUM_COMPARTMENTS elements
+    Each element = tons of cargo allocated to a given compartment
+*/
 struct Chromosome {
-    vector<double> genes;
+    std::vector<double> genes;
     double fitness;
 };
 
-// ============================
-// Fitness function
-// ============================
 double evaluateFitness(const Chromosome &chromo) {
     double totalProfit = 0.0;
 
-    // Track used weight and volume for each compartment
-    vector<double> usedWeight(NUM_COMPARTMENTS, 0.0);
-    vector<double> usedVolume(NUM_COMPARTMENTS, 0.0);
+    std::vector<double> usedWeight(NUM_COMPARTMENTS, 0.0);
+    std::vector<double> usedVolume(NUM_COMPARTMENTS, 0.0);
 
-    for (int c = 0; c < NUM_CARGOS; c++) {
-        for (int k = 0; k < NUM_COMPARTMENTS; k++) {
-            double tons = chromo.genes[c * NUM_COMPARTMENTS + k];
+    for (int n_cargos = 0; n_cargos < NUM_CARGOS; n_cargos++) {
+        for (int n_partment = 0; n_partment < NUM_COMPARTMENTS; n_partment++) {
+            double tons = chromo.genes[n_cargos * NUM_COMPARTMENTS + n_partment];
             if (tons < 0) return -1e9; // invalid solution
 
-            usedWeight[k] += tons;
-            usedVolume[k] += tons * cargos[c].volume / cargos[c].weight;
-            totalProfit += tons * cargos[c].profit;
+            usedWeight[n_partment] += tons;
+            usedVolume[n_partment] += tons * cargos[n_cargos].volume / cargos[n_cargos].weight;
+            totalProfit += tons * cargos[n_cargos].profit;
         }
     }
 
-    // Check constraints (capacity)
-    for (int k = 0; k < NUM_COMPARTMENTS; k++) {
-        if (usedWeight[k] > compartments[k].maxWeight + 1e-6) return -1e9;
-        if (usedVolume[k] > compartments[k].maxVolume + 1e-6) return -1e9;
+    // Check constraints capacity
+    for (int n_partment = 0; n_partment < NUM_COMPARTMENTS; n_partment++) {
+        if (usedWeight[n_partment] > compartments[n_partment].maxWeight) {
+            return -1e9;
+        }
+        if (usedVolume[n_partment] > compartments[n_partment].maxVolume) {
+            return -1e9;
+        };
     }
 
-    // Balance constraint: proportionality of weight to volume capacity
+    // proportionality of weight to volume capacity
     double totalCapVol = 0;
-    for (int k = 0; k < NUM_COMPARTMENTS; k++) totalCapVol += compartments[k].maxVolume;
+    for (int n_partment = 0; n_partment < NUM_COMPARTMENTS; n_partment++) totalCapVol += compartments[n_partment].maxVolume;
 
     double totalWeight = accumulate(usedWeight.begin(), usedWeight.end(), 0.0);
-    for (int k = 0; k < NUM_COMPARTMENTS; k++) {
-        double expectedRatio = compartments[k].maxVolume / totalCapVol;
-        double actualRatio = (totalWeight > 0) ? (usedWeight[k] / totalWeight) : 0;
+    for (int n_partment = 0; n_partment < NUM_COMPARTMENTS; n_partment++) {
+        double expectedRatio = compartments[n_partment].maxVolume / totalCapVol;
+        double actualRatio = (totalWeight > 0) ? (usedWeight[n_partment] / totalWeight) : 0;
         if (fabs(expectedRatio - actualRatio) > 0.15) {
-            return -1e9; // penalize imbalance
+            return -1e9;
         }
     }
 
     return totalProfit;
 }
 
-// ============================
-// Generate random chromosome
-// ============================
 Chromosome randomChromosome() {
     Chromosome chromo;
-    chromo.genes.resize(NUM_CARGOS * NUM_COMPARTMENTS);
+    chromo.genes.resize(NUM_GENES);
 
     for (int i = 0; i < NUM_CARGOS; i++) {
         double remaining = cargos[i].weight;
-        for (int k = 0; k < NUM_COMPARTMENTS; k++) {
+        for (int n_partment = 0; n_partment < NUM_COMPARTMENTS; n_partment++) {
             double part = ((double) rand() / RAND_MAX) * remaining;
-            chromo.genes[i * NUM_COMPARTMENTS + k] = part;
+            chromo.genes[i * NUM_COMPARTMENTS + n_partment] = part;
             remaining -= part;
             if (remaining < 0) remaining = 0;
         }
@@ -117,18 +107,12 @@ Chromosome randomChromosome() {
     return chromo;
 }
 
-// ============================
-// Selection: Tournament
-// ============================
-Chromosome tournamentSelection(const vector<Chromosome> &population) {
+Chromosome tournamentSelection(const std::vector<Chromosome> &population) {
     int a = rand() % POP_SIZE;
     int b = rand() % POP_SIZE;
     return (population[a].fitness > population[b].fitness) ? population[a] : population[b];
 }
 
-// ============================
-// Crossover: Single point
-// ============================
 Chromosome crossover(const Chromosome &p1, const Chromosome &p2) {
     Chromosome child;
     child.genes = p1.genes;
@@ -144,9 +128,6 @@ Chromosome crossover(const Chromosome &p1, const Chromosome &p2) {
     return child;
 }
 
-// ============================
-// Mutation: Random adjustment
-// ============================
 void mutate(Chromosome &chromo) {
     for (double &g : chromo.genes) {
         if (((double) rand() / RAND_MAX) < MUTATION_RATE) {
@@ -157,14 +138,11 @@ void mutate(Chromosome &chromo) {
     chromo.fitness = evaluateFitness(chromo);
 }
 
-// ============================
-// Main Genetic Algorithm
-// ============================
 int main() {
     srand(time(NULL));
 
     // Initialize population
-    vector<Chromosome> population;
+    std::vector<Chromosome> population;
     for (int i = 0; i < POP_SIZE; i++) {
         population.push_back(randomChromosome());
     }
@@ -172,7 +150,7 @@ int main() {
     Chromosome best = population[0];
 
     for (int gen = 0; gen < GENERATIONS; gen++) {
-        vector<Chromosome> newPop;
+        std::vector<Chromosome> newPop;
 
         for (int i = 0; i < POP_SIZE; i++) {
             Chromosome p1 = tournamentSelection(population);
@@ -180,26 +158,36 @@ int main() {
             Chromosome child = crossover(p1, p2);
             mutate(child);
             newPop.push_back(child);
-            if (child.fitness > best.fitness) best = child;
+            if (child.fitness > best.fitness) {
+                best = child;
+            }
+        }
+        for (size_t i = newPop.size(); i < POP_SIZE; i++)
+        {
+            Chromosome newChromosome = randomChromosome();
+            newPop.push_back(newChromosome);
+            if (newChromosome.fitness > best.fitness) {
+                best = newChromosome;
+            }
         }
 
         population = newPop;
 
         if (gen % 50 == 0) {
-            cout << "Generation " << gen << " Best fitness: " << best.fitness << "\n";
+            std::cout << "Generation " << gen << " Best fitness: " << best.fitness << "\n";
         }
     }
 
     // Output best solution
-    cout << "\nBest solution found:\n";
+    std::cout << "\nBest solution found:\n";
     for (int i = 0; i < NUM_CARGOS; i++) {
-        cout << "Cargo C" << (i+1) << ": ";
+        std::cout << "Cargo C" << (i+1) << ": ";
         for (int k = 0; k < NUM_COMPARTMENTS; k++) {
-            cout << fixed << setprecision(2) << best.genes[i * NUM_COMPARTMENTS + k] << "t in Compartment " << k+1 << "; ";
+            std::cout << std::fixed << std::setprecision(2) << best.genes[i * NUM_COMPARTMENTS + k] << "t in Compartment " << k+1 << "; ";
         }
-        cout << "\n";
+        std::cout << "\n";
     }
-    cout << "Total Profit: R$" << best.fitness << "\n";
+    std::cout << "Total Profit: R$" << best.fitness << "\n";
 
     return 0;
 }
