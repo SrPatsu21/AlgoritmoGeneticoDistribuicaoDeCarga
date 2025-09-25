@@ -14,6 +14,7 @@ struct Compartment {
 const int NUM_CARGOS = 4;
 const int NUM_COMPARTMENTS = 3;
 const int NUM_GENES = NUM_CARGOS * NUM_COMPARTMENTS;
+const int ELITISM = 4;
 
 Cargo cargos[NUM_CARGOS] = {
 //  (m³/ton), (ton), (R$/ton)
@@ -33,7 +34,7 @@ Compartment compartments[NUM_COMPARTMENTS] = {
 // Genetic Algorithm parameters
 const int POP_SIZE = 500;
 const int GENERATIONS = 500;
-const double MUTATION_RATE = 0.1;
+const double MUTATION_RATE = 0.2;
 const double CROSSOVER_RATE = 0.8;
 
 /**
@@ -110,7 +111,26 @@ Chromosome randomChromosome() {
 Chromosome tournamentSelection(const std::vector<Chromosome> &population) {
     int a = rand() % POP_SIZE;
     int b = rand() % POP_SIZE;
-    return (population[a].fitness > population[b].fitness) ? population[a] : population[b];
+    int c = rand() % POP_SIZE;
+    int d = rand() % POP_SIZE;
+    if (population[a].fitness > population[b].fitness)
+    {
+        if (population[c].fitness > population[d].fitness)
+        {
+            return (population[a].fitness > population[c].fitness) ? population[a] : population[c];
+        }else
+        {
+            return (population[a].fitness > population[d].fitness) ? population[a] : population[d];
+        }
+    }else{
+        if (population[c].fitness > population[d].fitness)
+        {
+            return (population[b].fitness > population[c].fitness) ? population[b] : population[c];
+        }else
+        {
+            return (population[b].fitness > population[d].fitness) ? population[b] : population[d];
+        }
+    }
 }
 
 Chromosome crossover(const Chromosome &p1, const Chromosome &p2) {
@@ -151,8 +171,15 @@ int main() {
 
     for (int gen = 0; gen < GENERATIONS; gen++) {
         std::vector<Chromosome> newPop;
+        for (size_t i = 0; i < ELITISM; i++)
+        {
+            newPop.push_back(population[i]);
+            if (population[i].fitness > best.fitness) {
+                best = population[i];
+            }
+        }
 
-        for (int i = 0; i < POP_SIZE; i++) {
+        for (int i = newPop.size(); i < POP_SIZE; i++) {
             Chromosome p1 = tournamentSelection(population);
             Chromosome p2 = tournamentSelection(population);
             Chromosome child = crossover(p1, p2);
