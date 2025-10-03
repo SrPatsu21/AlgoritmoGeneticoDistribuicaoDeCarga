@@ -66,7 +66,7 @@ double evaluateFitness(const Chromosome &chromo) {
         }
 
         if (totalCargoUsed[n_cargos] > cargos[n_cargos].weight + 1e-6) {
-            return -1e9; // solução inválida
+            return -1e9;
         }
     }
 
