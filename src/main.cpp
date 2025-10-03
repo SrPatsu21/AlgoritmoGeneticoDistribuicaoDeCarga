@@ -32,10 +32,10 @@ Compartment compartments[NUM_COMPARTMENTS] = {
 };
 
 // Genetic Algorithm parameters
-const int POP_SIZE = 500;
-const int GENERATIONS = 500;
-const double MUTATION_RATE = 0.2;
-const double CROSSOVER_RATE = 0.8;
+const int POP_SIZE = 1000;
+const int GENERATIONS = 5000;
+const double MUTATION_RATE = 0.05;
+const double CROSSOVER_RATE = 0.1;
 
 /**
     Chromosome representation:
