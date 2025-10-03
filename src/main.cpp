@@ -33,9 +33,14 @@ Compartment compartments[NUM_COMPARTMENTS] = {
 
 // Genetic Algorithm parameters
 const int POP_SIZE = 1000;
-const int GENERATIONS = 5000;
-const double MUTATION_RATE = 0.05;
-const double CROSSOVER_RATE = 0.1;
+const int GENERATIONS = 500;
+double MUTATION_RATE = 0.4;
+double CROSSOVER_RATE = 0.8;
+const double IGNORE_POP_PERCENT = 0.05;
+const double REDUCE_RATE = 0.01;
+const int STAGNANT_TIMES = 10;
+const double MIN_MUTATION_RATE = 0.01;
+const double MIN_CROSSOVER_RATE = 0.05;
 
 /**
     Chromosome representation:
@@ -172,6 +177,9 @@ int main() {
     }
 
     Chromosome best = population[0];
+    int stagnant = 0;
+    double last_best = 0.0;
+    int crossover_total = POP_SIZE-(POP_SIZE*IGNORE_POP_PERCENT);
 
     for (int gen = 0; gen < GENERATIONS; gen++) {
         std::vector<Chromosome> newPop;
@@ -183,7 +191,7 @@ int main() {
             }
         }
 
-        for (int i = newPop.size(); i < POP_SIZE; i++) {
+        for (int i = newPop.size(); i < crossover_total; i++) {
             Chromosome p1 = tournamentSelection(population);
             Chromosome p2 = tournamentSelection(population);
             Chromosome child = crossover(p1, p2);
@@ -203,9 +211,30 @@ int main() {
         }
 
         population = newPop;
+        if (MUTATION_RATE > MIN_MUTATION_RATE || CROSSOVER_RATE > MIN_CROSSOVER_RATE)
+        {
+            if (last_best == best.fitness && best.fitness != -1e9)
+            {
+                stagnant++;
+                if (stagnant >= STAGNANT_TIMES)
+                {
+                    if (MUTATION_RATE > MIN_MUTATION_RATE)
+                    {
+                        MUTATION_RATE = MUTATION_RATE-(MUTATION_RATE * REDUCE_RATE);
+                    }
+                    if (CROSSOVER_RATE > MIN_CROSSOVER_RATE)
+                    {
+                        CROSSOVER_RATE = CROSSOVER_RATE-(CROSSOVER_RATE * REDUCE_RATE);
+                    }
+                }
+            }else{
+                stagnant = 0;
+            }
+            last_best = best.fitness;
+        }
 
         if (gen % 50 == 0) {
-            std::cout << "Generation " << gen << " Best fitness: " << best.fitness << "\n";
+            std::cout << "Generation " << gen << " Best fitness: " << best.fitness << ", mutation:" << MUTATION_RATE << ", crossover:" << CROSSOVER_RATE << "\n";
         }
     }
 
