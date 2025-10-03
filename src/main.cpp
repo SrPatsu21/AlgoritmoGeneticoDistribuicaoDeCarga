@@ -52,15 +52,21 @@ double evaluateFitness(const Chromosome &chromo) {
 
     std::vector<double> usedWeight(NUM_COMPARTMENTS, 0.0);
     std::vector<double> usedVolume(NUM_COMPARTMENTS, 0.0);
+    std::vector<double> totalCargoUsed(NUM_CARGOS, 0.0);
 
     for (int n_cargos = 0; n_cargos < NUM_CARGOS; n_cargos++) {
         for (int n_partment = 0; n_partment < NUM_COMPARTMENTS; n_partment++) {
             double tons = chromo.genes[n_cargos * NUM_COMPARTMENTS + n_partment];
             if (tons < 0) return -1e9; // invalid solution
 
+            totalCargoUsed[n_cargos] += tons;
             usedWeight[n_partment] += tons;
             usedVolume[n_partment] += tons * cargos[n_cargos].volume / cargos[n_cargos].weight;
             totalProfit += tons * cargos[n_cargos].profit;
+        }
+
+        if (totalCargoUsed[n_cargos] > cargos[n_cargos].weight + 1e-6) {
+            return -1e9; // solução inválida
         }
     }
 
@@ -74,7 +80,7 @@ double evaluateFitness(const Chromosome &chromo) {
         };
     }
 
-    // proportionality of weight to volume capacity
+    // Proporcionalidade de peso para volume (opcional)
     double totalCapVol = 0;
     for (int n_partment = 0; n_partment < NUM_COMPARTMENTS; n_partment++) totalCapVol += compartments[n_partment].maxVolume;
 
@@ -82,9 +88,7 @@ double evaluateFitness(const Chromosome &chromo) {
     for (int n_partment = 0; n_partment < NUM_COMPARTMENTS; n_partment++) {
         double expectedRatio = compartments[n_partment].maxVolume / totalCapVol;
         double actualRatio = (totalWeight > 0) ? (usedWeight[n_partment] / totalWeight) : 0;
-        if (fabs(expectedRatio - actualRatio) > 0.15) {
-            return -1e9;
-        }
+        if (fabs(expectedRatio - actualRatio) > 0.15) return -1e9;
     }
 
     return totalProfit;
