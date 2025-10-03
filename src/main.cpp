@@ -14,7 +14,6 @@ struct Compartment {
 const int NUM_CARGOS = 4;
 const int NUM_COMPARTMENTS = 3;
 const int NUM_GENES = NUM_CARGOS * NUM_COMPARTMENTS;
-const int ELITISM = 4;
 
 Cargo cargos[NUM_CARGOS] = {
 //  (m³/ton), (ton), (R$/ton)
@@ -33,14 +32,21 @@ Compartment compartments[NUM_COMPARTMENTS] = {
 
 // Genetic Algorithm parameters
 const int POP_SIZE = 1000;
-const int GENERATIONS = 500;
-double MUTATION_RATE = 0.4;
-double CROSSOVER_RATE = 0.8;
+const int GENERATIONS = 5000;
+const int ELITISM = 4;
+
 const double IGNORE_POP_PERCENT = 0.05;
 const double REDUCE_RATE = 0.01;
 const int STAGNANT_TIMES = 10;
+const int STAGNANT_TIMES_RESET = 100;
+
+double INIT_MUTATION_RATE = 0.4;
+double INIT_CROSSOVER_RATE = 0.8;
 const double MIN_MUTATION_RATE = 0.01;
 const double MIN_CROSSOVER_RATE = 0.05;
+
+double MUTATION_RATE = INIT_MUTATION_RATE;
+double CROSSOVER_RATE = INIT_CROSSOVER_RATE;
 
 /**
     Chromosome representation:
@@ -211,27 +217,31 @@ int main() {
         }
 
         population = newPop;
-        if (MUTATION_RATE > MIN_MUTATION_RATE || CROSSOVER_RATE > MIN_CROSSOVER_RATE)
+
+        if (last_best == best.fitness && best.fitness != -1e9)
         {
-            if (last_best == best.fitness && best.fitness != -1e9)
-            {
-                stagnant++;
-                if (stagnant >= STAGNANT_TIMES)
-                {
-                    if (MUTATION_RATE > MIN_MUTATION_RATE)
-                    {
-                        MUTATION_RATE = MUTATION_RATE-(MUTATION_RATE * REDUCE_RATE);
-                    }
-                    if (CROSSOVER_RATE > MIN_CROSSOVER_RATE)
-                    {
-                        CROSSOVER_RATE = CROSSOVER_RATE-(CROSSOVER_RATE * REDUCE_RATE);
-                    }
-                }
-            }else{
+            stagnant++;
+            if (stagnant >= STAGNANT_TIMES_RESET) {
+                MUTATION_RATE = INIT_MUTATION_RATE;
+                CROSSOVER_RATE = INIT_CROSSOVER_RATE;
                 stagnant = 0;
+            } else if (stagnant >= STAGNANT_TIMES) {
+                if (MUTATION_RATE > MIN_MUTATION_RATE)
+                {
+                    MUTATION_RATE = MUTATION_RATE-(MUTATION_RATE * REDUCE_RATE);
+                    stagnant = 0;
+                }
+
+                if (CROSSOVER_RATE > MIN_CROSSOVER_RATE)
+                {
+                    CROSSOVER_RATE = CROSSOVER_RATE-(CROSSOVER_RATE * REDUCE_RATE);
+                    stagnant = 0;
+                }
             }
-            last_best = best.fitness;
+        }else{
+            stagnant = 0;
         }
+        last_best = best.fitness;
 
         if (gen % 50 == 0) {
             std::cout << "Generation " << gen << " Best fitness: " << best.fitness << ", mutation:" << MUTATION_RATE << ", crossover:" << CROSSOVER_RATE << "\n";
